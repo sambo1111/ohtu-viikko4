@@ -118,4 +118,86 @@ public class VerkkokauppaTest {
         
         verify(pankki).tilisiirto("jorma", 55, "111-111", "33333-44455", 7);
     }
+    
+    @Test
+    public void aloitaAsiointiMetodiNollaaEdellisenOstoksenTiedot () {
+        Pankki pankki = mock(Pankki.class);
+        
+        Viitegeneraattori viite = mock(Viitegeneraattori.class);
+        when(viite.uusi()).thenReturn(55);
+        
+        Varasto varasto = mock(Varasto.class);
+        
+        when(varasto.saldo(1)).thenReturn(6);
+        when(varasto.saldo(2)).thenReturn(10);
+        
+        when(varasto.haeTuote(1)).thenReturn(new Tuote(1, "kalja", 7));
+        when(varasto.haeTuote(2)).thenReturn(new Tuote(2, "viina", 10));
+        
+        Kauppa k = new Kauppa(varasto, pankki, viite);
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1);
+        k.lisaaKoriin(1);
+        
+        // Uusi asiointi, ostoskorin pitäisi nollautua
+        k.aloitaAsiointi();
+        k.lisaaKoriin(2);
+        k.tilimaksu("jorma", "111-111");
+        
+        verify(pankki).tilisiirto("jorma", 55, "111-111", "33333-44455", 10);
+    }
+    
+    @Test
+    public void generoidaanUusiViiteJokaiseenMaksuun() {
+        Pankki pankki = mock(Pankki.class);
+        
+        Viitegeneraattori viite = mock(Viitegeneraattori.class);
+        
+        Varasto varasto = mock(Varasto.class);
+        
+        when(varasto.saldo(1)).thenReturn(6);
+        
+        when(varasto.haeTuote(1)).thenReturn(new Tuote(1, "kalja", 7));
+        
+        Kauppa k = new Kauppa(varasto, pankki, viite);
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1);
+        k.tilimaksu("jorma", "111-111");
+        
+        verify(viite, times(1)).uusi();
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1);
+        k.tilimaksu("jorma", "111-111");
+        
+        verify(viite, times(2)).uusi();
+    }
+    
+    @Test
+    public void tuotteenVoiPoistaaKorista() {
+        Pankki pankki = mock(Pankki.class);
+        
+        Viitegeneraattori viite = mock(Viitegeneraattori.class);
+        when(viite.uusi()).thenReturn(55);
+        
+        Varasto varasto = mock(Varasto.class);
+        
+        when(varasto.saldo(1)).thenReturn(5);
+        
+        Tuote t = new Tuote(1, "kalja", 7);
+        when(varasto.haeTuote(1)).thenReturn(t);
+        
+        Kauppa k = new Kauppa(varasto, pankki, viite);
+        
+        k.aloitaAsiointi();
+        
+        k.lisaaKoriin(1);
+        
+        k.poistaKorista(1);
+        
+        verify(varasto, times(1)).palautaVarastoon(t);
+       
+    }
 }
